@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
+import os
 
 # ------------------ CONFIG ------------------
 st.set_page_config(
@@ -13,7 +14,9 @@ st.set_page_config(
 st.title("💰 AI-Based Project Cost Estimator")
 
 # ------------------ LOAD DATA ------------------
-df = pd.read_csv("3.data/projects.csv")
+DATA_PATH = os.path.join("3.data", "projects.csv")
+
+df = pd.read_csv(DATA_PATH)
 model = joblib.load("model.pkl")
 
 # ------------------ DATA PREVIEW ------------------
@@ -70,6 +73,7 @@ if st.button("💰 Estimate Cost"):
     st.subheader("📈 AI Prediction Results")
 
     c1, c2, c3 = st.columns(3)
+
     c1.metric("Effort", f"{predicted_hours:,.0f} hrs")
     c2.metric("Cost", f"₹{estimated_cost:,.0f}")
     c3.metric("Duration", f"{estimated_months:.1f} months")
@@ -96,15 +100,3 @@ st.subheader("📊 Data Insights")
 
 st.bar_chart(df["effort_hours"])
 st.line_chart(df["duration_months"])
-
-# ------------------ REPORT ------------------
-if st.button("📄 Generate Report"):
-    report = f"""
-    AI Cost Estimation Report
-
-    Predicted Effort: {predicted_hours:.0f} hrs
-    Estimated Cost: ₹{estimated_cost:.0f}
-    Duration: {estimated_months:.1f} months
-    """
-
-    st.download_button("Download Report", report, file_name="report.txt")
