@@ -1,102 +1,196 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import numpy as np
 import os
 
 # ------------------ CONFIG ------------------
-st.set_page_config(
-    page_title="AI Cost Estimator",
-    page_icon="💰",
-    layout="wide"
-)
+st.set_page_config(page_title="AI Cost Estimator", layout="wide")
 
-st.title("💰 AI-Based Project Cost Estimator")
+# ------------------ STYLING ------------------
+st.markdown("""
+<style>
+.stApp {
+    background: linear-gradient(135deg, #f3e8ff, #e9d5ff);
+}
+html, body {
+    color: #1e1b4b !important;
+}
+h1, h2, h3 {
+    color: #4c1d95 !important;
+}
+.stButton>button {
+    background: linear-gradient(90deg, #9333ea, #7e22ce);
+    color: white;
+    border-radius: 10px;
+    font-weight: bold;
+}
+label {
+    color: #1e1b4b !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ------------------ SESSION ------------------
+if "page" not in st.session_state:
+    st.session_state.page = "login"
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+# ------------------ LOGIN ------------------
+def login_page():
+    st.title("🔐 Login")
+
+    username = st.text_input("Username", placeholder="Enter username")
+    password = st.text_input("Password", type="password", placeholder="Enter password")
+
+    if st.button("Login"):
+        if username and password:
+            st.session_state.logged_in = True
+            st.session_state.page = "input"
+            st.rerun()
+        else:
+            st.error("Please enter username and password")
 
 # ------------------ LOAD DATA ------------------
 DATA_PATH = os.path.join("3.data", "projects.csv")
-
 df = pd.read_csv(DATA_PATH)
 model = joblib.load("model.pkl")
 
-# ------------------ DATA PREVIEW ------------------
-st.subheader("📊 Dataset Overview")
-st.dataframe(df)
+# ------------------ INPUT PAGE ------------------
+def input_page():
+    st.title("📊 Enter Project Details")
 
-# ------------------ SELECT PROJECT ------------------
-st.subheader("📌 Select Existing Project")
+    if st.button("🔓 Logout"):
+        st.session_state.logged_in = False
+        st.session_state.page = "login"
+        st.rerun()
 
-selected_index = st.selectbox("Choose Project", df.index)
-selected_project = df.loc[selected_index]
+    col1, col2 = st.columns(2)
 
-st.write("Selected Project:", selected_project)
+    with col1:
+        team_exp = st.number_input("Team Experience (0-10)", 0, 10, value=None, placeholder="e.g. 3")
+        manager_exp = st.number_input("Manager Experience (0-10)", 0, 10, value=None, placeholder="e.g. 5")
+        duration = st.number_input("Duration (months)", 1, 60, value=None, placeholder="e.g. 12")
+        transactions = st.number_input("Transactions", 1, 1000, value=None, placeholder="e.g. 200")
 
-# ------------------ INPUTS ------------------
-st.subheader("⚙️ Modify Project Inputs")
+    with col2:
+        entities = st.number_input("Entities", 1, 500, value=None, placeholder="e.g. 100")
+        adjustment = st.number_input("Adjustment Factor", 1, 100, value=None, placeholder="e.g. 30")
+        language = st.selectbox("Language Type", [None, 1, 2, 3],
+                                format_func=lambda x: "Select language" if x is None else f"Type {x}")
+        hourly_rate = st.number_input("Hourly Rate (₹)", 100, 5000, value=None, placeholder="e.g. 500")
 
-col1, col2 = st.columns(2)
+    if st.button("➡️ Estimate"):
+        if None in [team_exp, manager_exp, duration, transactions, entities, adjustment, language, hourly_rate]:
+            st.error("⚠️ Please fill all fields")
+        else:
+            input_data = [[team_exp, manager_exp, duration, transactions,
+                           entities, adjustment, language]]
 
-with col1:
-    team_exp = st.number_input("Team Experience", value=int(selected_project["team_experience"]))
-    manager_exp = st.number_input("Manager Experience", value=int(selected_project["manager_experience"]))
-    duration = st.number_input("Duration (months)", value=int(selected_project["duration_months"]))
-    transactions = st.number_input("Transactions", value=int(selected_project["transactions"]))
+            predicted_hours = model.predict(input_data)[0]
 
-with col2:
-    entities = st.number_input("Entities", value=int(selected_project["entities"]))
-    adjustment = st.number_input("Adjustment Factor", value=int(selected_project["adjustment"]))
-    language = st.number_input("Language Type (1/2/3)", value=int(selected_project["language"]))
-    hourly_rate = st.number_input("Hourly Rate (₹)", value=500)
+            st.session_state.result = {
+                "hours": predicted_hours,
+                "cost": predicted_hours * hourly_rate,
+                "months": predicted_hours / (160 * 5),
+                "transactions": transactions,
+                "team_exp": team_exp,
+                "manager_exp": manager_exp
+            }
 
-# ------------------ PREDICTION ------------------
-if st.button("💰 Estimate Cost"):
+            st.session_state.page = "result"
+            st.rerun()
 
-    input_data = [[
-        team_exp,
-        manager_exp,
-        duration,
-        transactions,
-        entities,
-        adjustment,
-        language
-    ]]
+# ------------------ RESULT PAGE ------------------
+def result_page():
+    st.title("📈 Results")
 
-    predicted_hours = model.predict(input_data)[0]
-
-    # Cost & duration
-    estimated_cost = predicted_hours * hourly_rate
-    estimated_months = predicted_hours / (160 * 5)
-
-    # Uncertainty
-    uncertainty = predicted_hours * 0.15
-
-    st.subheader("📈 AI Prediction Results")
+    res = st.session_state.result
 
     c1, c2, c3 = st.columns(3)
+    c1.metric("Effort", f"{res['hours']:.0f} hrs")
+    c2.metric("Cost", f"₹{res['cost']:.0f}")
+    c3.metric("Duration", f"{res['months']:.1f} months")
 
-    c1.metric("Effort", f"{predicted_hours:,.0f} hrs")
-    c2.metric("Cost", f"₹{estimated_cost:,.0f}")
-    c3.metric("Duration", f"{estimated_months:.1f} months")
+    # AI Explanation
+    st.subheader("🤖 AI Explanation")
 
-    st.info(f"📊 Confidence Range: ± {uncertainty:.0f} hrs")
+    explanation = f"""
+    The model predicts **{res['hours']:.0f} hours** based on your inputs.
 
-    # ------------------ COCOMO ------------------
-    cocomo_effort = 2.94 * (transactions ** 1.1)
+    • Higher transactions increase system complexity  
+    • Team experience ({res['team_exp']}) improves efficiency  
+    • Manager experience ({res['manager_exp']}) helps better planning  
 
-    st.subheader("📐 COCOMO Comparison")
-    st.write(f"COCOMO Estimated Effort: {cocomo_effort:.0f} hrs")
+    💡 Estimated cost is ₹{res['cost']:.0f} based on effort × hourly rate  
+    📊 Duration is calculated using standard workload assumptions  
+    """
 
-    # ------------------ SCENARIOS ------------------
-    st.subheader("⚖️ Scenario Analysis")
+    st.info(explanation)
 
-    low_cost = predicted_hours * 400
-    high_cost = predicted_hours * 800
+    # COCOMO
+    cocomo = 2.94 * (res["transactions"] ** 1.1)
+    st.write(f"📐 COCOMO Estimate: {cocomo:.0f} hrs")
 
-    st.write("Low Budget Scenario: ₹", int(low_cost))
-    st.write("High Budget Scenario: ₹", int(high_cost))
+    col1, col2 = st.columns(2)
 
-# ------------------ VISUALIZATION ------------------
-st.subheader("📊 Data Insights")
+    with col1:
+        if st.button("📊 View Graphs"):
+            st.session_state.page = "graphs"
+            st.rerun()
 
-st.bar_chart(df["effort_hours"])
-st.line_chart(df["duration_months"])
+    with col2:
+        if st.button("📄 View Report"):
+            st.session_state.page = "report"
+            st.rerun()
+
+    if st.button("⬅️ Back"):
+        st.session_state.page = "input"
+        st.rerun()
+
+# ------------------ GRAPH PAGE ------------------
+def graph_page():
+    st.title("📊 Graphs")
+
+    st.bar_chart(df["effort_hours"])
+    st.line_chart(df["duration_months"])
+
+    if st.button("⬅️ Back"):
+        st.session_state.page = "result"
+        st.rerun()
+
+# ------------------ REPORT PAGE ------------------
+def report_page():
+    st.title("📄 Report")
+
+    res = st.session_state.result
+
+    report = f"""
+AI COST ESTIMATION REPORT
+
+Effort: {res['hours']:.0f} hrs
+Cost: ₹{res['cost']:.0f}
+Duration: {res['months']:.1f} months
+"""
+
+    st.text(report)
+
+    st.download_button("⬇️ Download Report", report, file_name="report.txt")
+
+    if st.button("⬅️ Back"):
+        st.session_state.page = "result"
+        st.rerun()
+
+# ------------------ NAVIGATION ------------------
+if not st.session_state.logged_in:
+    login_page()
+else:
+    if st.session_state.page == "input":
+        input_page()
+    elif st.session_state.page == "result":
+        result_page()
+    elif st.session_state.page == "graphs":
+        graph_page()
+    elif st.session_state.page == "report":
+        report_page()
