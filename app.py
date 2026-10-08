@@ -8,6 +8,7 @@ import secrets
 from datetime import datetime
 
 
+
 # =========================================================
 # CONFIGURATION
 # =========================================================
@@ -19,6 +20,15 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+
+# EstiMate AI Logo
+LOGO_PATH = "logo.png"
+
+if os.path.exists(LOGO_PATH):
+    st.logo(
+        LOGO_PATH,
+        size="large"
+    )
 # =========================================================
 # STYLING
 # =========================================================
@@ -194,6 +204,29 @@ div[data-testid="stAlert"] {
     color: #6b5b95 !important;
 }
 
+/* HELP TOOLTIP */
+div[data-testid="stTooltipContent"] {
+    background-color: white !important;
+    color: #1e1b4b !important;
+    border-radius: 8px !important;
+    padding: 10px 12px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+}
+
+div[data-testid="stTooltipContent"] * {
+    color: #1e1b4b !important;
+}
+
+/* Alternative tooltip container used by some Streamlit versions */
+div[data-baseweb="tooltip"] {
+    background-color: white !important;
+    color: #1e1b4b !important;
+}
+
+div[data-baseweb="tooltip"] * {
+    color: #1e1b4b !important;
+}
+
 </style>
 ''', unsafe_allow_html=True)
 # =========================================================
@@ -327,29 +360,33 @@ MODEL_FEATURES = [
 
 def auth_page():
 
+    with st.container(horizontal_alignment="center"):
+        if os.path.exists("logo.png"):
+            st.image("logo.png", width=150)
+
     st.markdown(
-        "<div style=\"text-align:center; font-size:64px;\">💰</div>",
+        "<h1 style='text-align:center; color:#4c1d95;'>"
+        "Project Cost Estimator"
+        "</h1>",
         unsafe_allow_html=True
     )
 
-    st.title("AI Project Cost Estimator")
-
     st.markdown(
-        "<div style=\"text-align:center; font-size:18px; color:#4c1d95; margin-bottom:25px;\">"
+        "<div style='text-align:center; font-size:18px; color:#4c1d95; margin-bottom:25px;'>"
         "Securely sign in or create an account to continue."
         "</div>",
         unsafe_allow_html=True
     )
-
     col1, col2, col3 = st.columns([1, 2, 1])
 
     with col2:
         st.markdown(
-            "<div style=\"background:rgba(255,255,255,0.88); padding:30px; "
-            "border-radius:18px; border:1px solid #c084fc; text-align:center;\">"
-            "<h2 style=\"color:#4c1d95;\">Welcome</h2>"
-            "<p>Sign in to your account or create a new account.</p>"
-            "</div>",
+         "<div style=\"background:rgba(255,255,255,0.88); padding:12px 20px; "
+    "border-radius:5px; border:1px solid #c084fc; text-align:center; "
+    "max-width:380px; margin:auto;\">"
+    "<h2 style=\"color:#4c1d95; margin:5px 0;\">Welcome</h2>"
+    "<p style=\"margin:5px 0;\">Sign in to your account or create a new account.</p>"
+    "</div>",
             unsafe_allow_html=True
         )
 
@@ -479,7 +516,7 @@ def show_header():
         )
 
         st.caption(
-            f"Welcome, {st.session_state.username} 👋"
+            f"Welcome, {st.session_state.username} "
         )
 
     with col2:
@@ -504,7 +541,7 @@ def input_page():
 
     show_header()
 
-    st.title("📊 Enter Your Project Details")
+    st.title("Enter Your Project Details")
 
     st.write(
         "Provide basic information about your software project. "
@@ -526,7 +563,7 @@ def input_page():
     with col1:
 
         team_exp = st.number_input(
-            "👨‍💻 How experienced is your development team?",
+            "How experienced is your development team?",
             min_value=0,
             max_value=10,
             value=None,
@@ -544,7 +581,7 @@ def input_page():
     with col2:
 
         manager_exp = st.number_input(
-            "👨‍💼 How experienced is your project manager?",
+            "How experienced is your project manager?",
             min_value=0,
             max_value=10,
             value=None,
@@ -570,7 +607,7 @@ def input_page():
     with col1:
 
         duration = st.number_input(
-            "📅 What is the planned development duration?",
+            "What is the planned development duration?",
             min_value=1,
             max_value=60,
             value=None,
@@ -587,7 +624,7 @@ def input_page():
     with col2:
 
         transactions = st.number_input(
-            "🔄 Approximately how many system transactions are expected?",
+            "Approximately how many system transactions are expected?",
             min_value=1,
             max_value=1000,
             value=None,
@@ -607,7 +644,7 @@ def input_page():
     with col1:
 
         entities = st.number_input(
-            "🗂️ Approximately how many data entities are involved?",
+            "Approximately how many data entities are involved?",
             min_value=1,
             max_value=500,
             value=None,
@@ -625,7 +662,7 @@ def input_page():
     with col2:
 
         adjustment = st.number_input(
-            "⚙️ What is the project adjustment factor?",
+            "What is the project adjustment factor?",
             min_value=1,
             max_value=100,
             value=None,
@@ -651,7 +688,7 @@ def input_page():
     with col1:
 
         language = st.selectbox(
-            "💻 Select the language category",
+            "Select the language category",
             [None, 1, 2, 3],
             format_func=lambda x:
                 "Select a category"
@@ -670,7 +707,7 @@ def input_page():
     with col2:
 
         hourly_rate = st.number_input(
-            "💰 What is the estimated developer cost per hour?",
+            "What is the estimated developer cost per hour?",
             min_value=100,
             max_value=5000,
             value=None,
@@ -694,7 +731,7 @@ def input_page():
     # =====================================================
 
     st.info(
-        "📚 **Model Dataset:** The estimator is trained using "
+        "**Model Dataset:** The estimator is trained using "
         "the Desharnais software effort estimation dataset "
         "containing 81 historical software projects."
     )
@@ -705,7 +742,7 @@ def input_page():
     # =====================================================
 
     st.info(
-        "💡 **How this works:** Your project information is "
+        "**How this works:** Your project information is "
         "processed by a Random Forest machine-learning model "
         "trained on historical software project data. "
         "The model predicts the required development effort."
@@ -717,7 +754,7 @@ def input_page():
     # =====================================================
 
     if st.button(
-        "🤖 Generate AI Estimate",
+        "Generate AI Estimate",
         use_container_width=True
     ):
 
@@ -925,7 +962,7 @@ def result_page():
     # AI EXPLANATION
     # =====================================================
 
-    st.subheader("🤖 AI Explanation")
+    st.subheader("AI Explanation")
 
     if res["transactions"] > 250:
 
@@ -1019,7 +1056,7 @@ def result_page():
 
 
     st.success(
-        f"💡 The AI model estimates approximately "
+        f"The AI model estimates approximately "
         f"**{res['hours']:,.0f} hours** of development effort."
     )
 
@@ -1030,7 +1067,7 @@ def result_page():
 
     st.markdown("---")
 
-    st.subheader("📊 Model Performance")
+    st.subheader("Model Performance")
 
     m1, m2, m3 = st.columns(3)
 
@@ -1079,7 +1116,7 @@ def result_page():
 
     st.markdown("---")
 
-    st.subheader("🔎 What Influences the Prediction?")
+    st.subheader("What Influences the Prediction?")
 
     importance_data = pd.DataFrame({
         "Feature": [
@@ -1164,7 +1201,7 @@ def graph_page():
 
     show_header()
 
-    st.title("📊 Project Data Insights")
+    st.title("Project Data Insights")
 
     res = st.session_state.result
 
@@ -1173,7 +1210,7 @@ def graph_page():
     # HISTORICAL EFFORT
     # =====================================================
 
-    st.subheader("📈 Historical Effort Distribution")
+    st.subheader("Historical Effort Distribution")
 
     st.bar_chart(
         df["Effort"]
@@ -1184,7 +1221,7 @@ def graph_page():
     # HISTORICAL PROJECT LENGTH
     # =====================================================
 
-    st.subheader("📅 Historical Project Length")
+    st.subheader("Historical Project Length")
 
     st.line_chart(
         df["Length"]
@@ -1195,7 +1232,7 @@ def graph_page():
     # TRANSACTIONS
     # =====================================================
 
-    st.subheader("🔄 Historical Transactions")
+    st.subheader("Historical Transactions")
 
     st.bar_chart(
         df["Transactions"]
@@ -1206,7 +1243,7 @@ def graph_page():
     # ENTITIES
     # =====================================================
 
-    st.subheader("🗂️ Historical Entities")
+    st.subheader("Historical Entities")
 
     st.bar_chart(
         df["Entities"]
@@ -1217,7 +1254,7 @@ def graph_page():
     # YOUR PROJECT VS HISTORICAL DATA
     # =====================================================
 
-    st.subheader("🔎 Your Project vs Historical Data")
+    st.subheader("Your Project vs Historical Data")
 
     average_effort = df["Effort"].mean()
 
@@ -1359,7 +1396,7 @@ def report_page():
     # PROJECT INPUTS
     # =====================================================
 
-    st.subheader("📊 Project Inputs")
+    st.subheader("Project Inputs")
 
     input_table = pd.DataFrame({
 
@@ -1393,7 +1430,7 @@ def report_page():
     # ESTIMATION
     # =====================================================
 
-    st.subheader("🤖 AI Estimation")
+    st.subheader("AI Estimation")
 
     c1, c2, c3 = st.columns(3)
 
@@ -1417,7 +1454,7 @@ def report_page():
     # AI SUMMARY
     # =====================================================
 
-    st.subheader("💡 AI Summary")
+    st.subheader("AI Summary")
 
     st.write(
         f"The machine-learning model predicts approximately "
@@ -1440,7 +1477,7 @@ def report_page():
     # MODEL PERFORMANCE
     # =====================================================
 
-    st.subheader("📊 Model Performance")
+    st.subheader("Model Performance")
 
     performance_table = pd.DataFrame({
 
